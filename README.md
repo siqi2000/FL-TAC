@@ -1,6 +1,6 @@
 # FL-TAC: Enhanced Fine-Tuning in Federated Learning via Low-Rank, Task-Specific Adapter Clustering
 
-**📖 [English](README.md) · [中文](README_zh.md)**
+<p align="center"><b>📖 <a href="README.md">English</a> · <a href="README_zh.md">中文</a></b></p>
 
 [![arXiv](https://img.shields.io/badge/arXiv-2404.15384-b31b1b.svg)](https://arxiv.org/abs/2404.15384)
 [![Venue](https://img.shields.io/badge/ICLR%202024-LLM%20Agents%20Workshop-blue)](https://llmagents.github.io/)
@@ -34,8 +34,11 @@ Official implementation of **"FL-TAC: Enhanced Fine-Tuning in Federated Learning
 - [Installation](#installation)
 - [Datasets](#datasets)
 - [Reproducing the paper](#reproducing-the-paper)
-  - [Running the FedIT baseline](#running-the-fedit-baseline)
-  - [Hyper-parameters](#hyper-parameters)
+  - [Scenario 1 — GLUE text classification (BERT)](#scenario-1--glue-text-classification-bert)
+  - [Scenario 2 — CIFAR image classification (ViT)](#scenario-2--cifar-image-classification-vit)
+  - [Scenario 3 — Databricks-Dolly-15k instruction tuning (LLaMA-7B)](#scenario-3--databricks-dolly-15k-instruction-tuning-llama-7b)
+  - [Default hyper-parameters](#default-hyper-parameters)
+- [Evaluation](#evaluation)
 - [Hardware requirements](#hardware-requirements)
 - [Output format](#output-format)
 - [Citation](#citation)
@@ -182,34 +185,74 @@ For LLaMA-7B you'll also need [`huggyllama/llama-7b`](https://huggingface.co/hug
 
 ## Reproducing the paper
 
-```bash
-# GLUE + BERT  (single 8 GB GPU is enough)
-bash scripts/run_glue.sh
+All three scenarios use the same federated setup: **10 clients, Dirichlet(α = 0.5) data partition** on every task (Hsu et al., 2020), seed = 42, full client participation each round.
 
-# CIFAR-10/100 + ViT  (single 8 GB GPU is enough)
-bash scripts/run_cifar.sh
+### Scenario 1 — GLUE text classification (BERT)
 
-# Databricks-Dolly-15k + LLaMA-7B
-#   single card  (>= 24 GB):
-CUDA_VISIBLE_DEVICES=0 bash scripts/run_dolly.sh
-#   four cards (recommended for speed):
-CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/run_dolly.sh
-```
-
-For LLaMA-7B we use HuggingFace's `device_map="auto"` to shard the backbone across all visible GPUs, so the **same code runs on single-card and multi-card** without changes.
-
-### Running the FedIT baseline
-
-Override the method on the command line:
+| | |
+|---|---|
+| **Backbone** | `bert-base-uncased` |
+| **Datasets** | GLUE: SST-2, MRPC, QQP, QNLI, RTE (5 tasks) |
+| **Eval metric** | accuracy on the official GLUE validation split |
+| **Hardware** | 1 × GPU with ≥ 8 GB |
 
 ```bash
-python main.py --config configs/glue_bert.yaml --override method=fedit \
-  output_dir=results/glue_bert_fedit
+# FL-TAC (ours)
+python main.py --config configs/glue_bert.yaml
+
+# FedIT baseline (single shared adapter)
+python main.py --config configs/glue_bert.yaml --method fedit \
+    --output_dir results/glue_bert_fedit
 ```
 
-### Hyper-parameters
+### Scenario 2 — CIFAR image classification (ViT)
 
-Default hyper-parameters per scenario (see the YAML files for the full list):
+| | |
+|---|---|
+| **Backbone** | `google/vit-base-patch16-224-in21k` |
+| **Datasets** | CIFAR-10, CIFAR-100 (2 tasks) |
+| **Eval metric** | top-1 accuracy on the official test split |
+| **Hardware** | 1 × GPU with ≥ 8 GB |
+
+```bash
+# FL-TAC (ours)
+python main.py --config configs/cifar_vit.yaml
+
+# FedIT baseline
+python main.py --config configs/cifar_vit.yaml --method fedit \
+    --output_dir results/cifar_vit_fedit
+```
+
+### Scenario 3 — Databricks-Dolly-15k instruction tuning (LLaMA-7B)
+
+| | |
+|---|---|
+| **Backbone** | `huggyllama/llama-7b` (ungated) — or `meta-llama/Llama-2-7b-hf` (gated) |
+| **Dataset** | Databricks-Dolly-15k, split by its 8 task categories |
+| **Code metric** | per-task language-modelling cross-entropy loss on a held-out 5 % split |
+| **Paper metric** | **GPT-4 scoring** on generated answers (see [Evaluation](#evaluation) below) |
+| **Hardware** | 1 × 24 GB GPU minimum, 2–4 × RTX 4090 / 1 × A100 recommended |
+
+```bash
+# FL-TAC (ours) — single card
+CUDA_VISIBLE_DEVICES=0 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b
+
+# FL-TAC (ours) — multi-card via device_map="auto"
+CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b
+
+# FedIT baseline
+CUDA_VISIBLE_DEVICES=0,1 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b --method fedit \
+    --output_dir results/dolly_llama_fedit
+```
+
+For LLaMA-7B we rely on HuggingFace's `device_map="auto"` to shard the backbone across all visible GPUs. **The same code runs on single-card and multi-card** without changes — just set `CUDA_VISIBLE_DEVICES`.
+
+### Default hyper-parameters
+
+Defined in the YAML configs; can be overridden on the command line via either named flags (`--rounds 30 --lr 1e-4`) or generic `--override key=value`.
 
 | Scenario | LoRA rank | LR | Batch | Local steps | Rounds |
 |---|---|---|---|---|---|
@@ -218,6 +261,26 @@ Default hyper-parameters per scenario (see the YAML files for the full list):
 | Dolly / LLaMA-7B | 8 | 3e-4 | 4 | 30 | 10 |
 
 All scenarios: 10 clients, Dirichlet α = 0.5, seed = 42.
+
+---
+
+## Evaluation
+
+| Scenario | What `metrics.jsonl` contains | How the paper scores it |
+|---|---|---|
+| **GLUE** | top-1 **accuracy** per task per eval round | same — accuracy on the GLUE validation split |
+| **CIFAR** | top-1 **accuracy** per task per eval round | same — accuracy on the test split |
+| **Dolly** | **language-modelling loss** (cross-entropy) per task per eval round | **GPT-4 scoring** on generated answers, using the protocol of [FedIT (Zhang et al., 2023)](https://github.com/JayZhang42/FederatedGPT-Shepherd) |
+
+For GLUE and CIFAR our `metrics.jsonl` numbers are directly comparable to the paper.
+
+For **Dolly**, the paper uses GPT-4 to score the model's generated answers against the reference responses on a 0–1 scale, then averages per category. Our `metrics.jsonl` reports LM loss instead, which is fast to compute and useful for sanity-checking convergence, but is **not** the same metric as the paper's. To exactly reproduce the paper's Dolly numbers you need to:
+
+1. Load the final FL-TAC adapter for each task and `model.generate(...)` answers on the held-out split.
+2. Send `(reference, prediction)` pairs to a GPT-4 model with a scoring prompt.
+3. Average the returned scores per task.
+
+A starter script is provided at [`scripts/eval_dolly_gpt4.py`](scripts/eval_dolly_gpt4.py) — fill in your `OPENAI_API_KEY` and run after the FL-TAC training has finished.
 
 ---
 

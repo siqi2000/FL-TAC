@@ -1,6 +1,6 @@
 # FL-TAC:基于低秩任务特定适配器聚类的联邦学习微调方法
 
-**📖 [English](README.md) · [中文](README_zh.md)**
+<p align="center"><b>📖 <a href="README.md">English</a> · <a href="README_zh.md">中文</a></b></p>
 
 [![arXiv](https://img.shields.io/badge/arXiv-2404.15384-b31b1b.svg)](https://arxiv.org/abs/2404.15384)
 [![Venue](https://img.shields.io/badge/ICLR%202024-LLM%20Agents%20Workshop-blue)](https://llmagents.github.io/)
@@ -34,9 +34,12 @@
 - [安装](#安装)
 - [数据集](#数据集)
 - [复现实验](#复现实验)
-  - [跑 FedIT 基线](#跑-fedit-基线)
+  - [场景 1 —— GLUE 文本分类(BERT)](#场景-1--glue-文本分类bert)
+  - [场景 2 —— CIFAR 图像分类(ViT)](#场景-2--cifar-图像分类vit)
+  - [场景 3 —— Databricks-Dolly-15k 指令微调(LLaMA-7B)](#场景-3--databricks-dolly-15k-指令微调llama-7b)
   - [修改超参的两种方式](#修改超参的两种方式)
   - [默认超参](#默认超参)
+- [评估说明](#评估说明)
 - [硬件需求](#硬件需求)
 - [输出格式](#输出格式)
 - [引用](#引用)
@@ -183,30 +186,70 @@ LLaMA-7B 主干可以使用 [`huggyllama/llama-7b`](https://huggingface.co/huggy
 
 ## 复现实验
 
-```bash
-# GLUE + BERT(单卡 8GB 显存即可)
-bash scripts/run_glue.sh
+三个场景统一使用相同的联邦设置:**10 个客户端,所有任务的数据都按 Dirichlet(α = 0.5)** (Hsu et al., 2020)切分到客户端,seed = 42,每轮全员参与。
 
-# CIFAR-10/100 + ViT(单卡 8GB 显存即可)
-bash scripts/run_cifar.sh
+### 场景 1 —— GLUE 文本分类(BERT)
 
-# Databricks-Dolly-15k + LLaMA-7B
-#   单卡(>= 24 GB):
-CUDA_VISIBLE_DEVICES=0 bash scripts/run_dolly.sh
-#   多卡(推荐,加快训练):
-CUDA_VISIBLE_DEVICES=0,1,2,3 bash scripts/run_dolly.sh
-```
-
-LLaMA-7B 使用 HuggingFace 的 `device_map="auto"` 自动切分到所有可见 GPU,**同一份代码既能跑单卡也能跑多卡**,无需修改。
-
-### 跑 FedIT 基线
-
-通过命令行覆盖 `method` 即可:
+| | |
+|---|---|
+| **主干** | `bert-base-uncased` |
+| **数据集** | GLUE:SST-2、MRPC、QQP、QNLI、RTE(共 5 个任务)|
+| **评估指标** | GLUE 官方 validation split 上的 accuracy |
+| **硬件** | 单卡 ≥ 8 GB 显存即可 |
 
 ```bash
+# FL-TAC(本文方法)
+python main.py --config configs/glue_bert.yaml
+
+# FedIT 基线(单共享 adapter)
 python main.py --config configs/glue_bert.yaml --method fedit \
-  --output_dir results/glue_bert_fedit
+    --output_dir results/glue_bert_fedit
 ```
+
+### 场景 2 —— CIFAR 图像分类(ViT)
+
+| | |
+|---|---|
+| **主干** | `google/vit-base-patch16-224-in21k` |
+| **数据集** | CIFAR-10、CIFAR-100(共 2 个任务)|
+| **评估指标** | 官方 test split 上的 top-1 accuracy |
+| **硬件** | 单卡 ≥ 8 GB 显存即可 |
+
+```bash
+# FL-TAC(本文方法)
+python main.py --config configs/cifar_vit.yaml
+
+# FedIT 基线
+python main.py --config configs/cifar_vit.yaml --method fedit \
+    --output_dir results/cifar_vit_fedit
+```
+
+### 场景 3 —— Databricks-Dolly-15k 指令微调(LLaMA-7B)
+
+| | |
+|---|---|
+| **主干** | `huggyllama/llama-7b`(无授权) 或 `meta-llama/Llama-2-7b-hf`(需授权) |
+| **数据集** | Databricks-Dolly-15k,按其 8 个任务类别(category)切分 |
+| **代码默认指标** | 留出 5% 验证集上的逐任务语言模型交叉熵 loss |
+| **论文使用指标** | **GPT-4 评分**(详见下方[评估说明](#评估说明)) |
+| **硬件** | 最低单卡 24 GB,推荐 2–4 × RTX 4090 / 1 × A100 |
+
+```bash
+# FL-TAC(本文方法)—— 单卡
+CUDA_VISIBLE_DEVICES=0 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b
+
+# FL-TAC(本文方法)—— 多卡(device_map="auto" 自动切分)
+CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b
+
+# FedIT 基线
+CUDA_VISIBLE_DEVICES=0,1 python main.py --config configs/dolly_llama.yaml \
+    --model_name huggyllama/llama-7b --method fedit \
+    --output_dir results/dolly_llama_fedit
+```
+
+LLaMA-7B 使用 HuggingFace 的 `device_map="auto"` 自动切分到所有可见 GPU,**同一份代码既能跑单卡也能跑多卡**,无需修改任何代码,只用 `CUDA_VISIBLE_DEVICES` 控制即可。
 
 ### 修改超参的两种方式
 
@@ -230,6 +273,26 @@ python main.py --config configs/glue_bert.yaml \
 | Dolly / LLaMA-7B | 8 | 3e-4 | 4 | 30 | 10 |
 
 三个场景统一:10 个客户端,Dirichlet α = 0.5,seed = 42。
+
+---
+
+## 评估说明
+
+| 场景 | `metrics.jsonl` 里记录的指标 | 论文里使用的指标 |
+|---|---|---|
+| **GLUE** | 每个任务每个评估轮的 top-1 **accuracy** | 同左 — GLUE validation split 上的 accuracy |
+| **CIFAR** | 每个任务每个评估轮的 top-1 **accuracy** | 同左 — test split 上的 accuracy |
+| **Dolly** | 每个任务每个评估轮的**语言模型交叉熵 loss** | **GPT-4 评分**:沿用 [FedIT (Zhang et al., 2023)](https://github.com/JayZhang42/FederatedGPT-Shepherd) 的协议 |
+
+GLUE 和 CIFAR 两个场景下,我们 `metrics.jsonl` 输出的数值可以直接和论文表里的数字对比。
+
+**Dolly** 场景下,论文是用 GPT-4 给模型生成的回答打 0–1 分(对照 reference 回答),然后按任务类别求均值。我们代码默认输出的是 LM loss,这个指标计算快、可以用来观察收敛趋势,但**和论文里的 GPT-4 评分不是同一个量**。要严格复现论文的 Dolly 表格数字,需要:
+
+1. 加载训练好的 FL-TAC 任务 adapter,用 `model.generate(...)` 在留出集上生成回答。
+2. 把 `(reference, prediction)` 配对发给 GPT-4,使用一个评分提示词。
+3. 按任务类别取平均。
+
+我们提供了一个起步脚本 [`scripts/eval_dolly_gpt4.py`](scripts/eval_dolly_gpt4.py) — 填入你的 `OPENAI_API_KEY`,在 FL-TAC 训练结束后运行即可。
 
 ---
 
