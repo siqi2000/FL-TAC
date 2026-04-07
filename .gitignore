@@ -26,3 +26,7 @@ wandb/
 .vscode/
 .idea/
 .DS_Store
+
+# Overleaf source -- not for public release
+ICLR_LLMAgent_Workshop.zip
+_overleaf_tmp/

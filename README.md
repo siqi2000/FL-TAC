@@ -10,7 +10,10 @@
 
 Official implementation of **"FL-TAC: Enhanced Fine-Tuning in Federated Learning via Low-Rank, Task-Specific Adapter Clustering"**, accepted at the **ICLR 2024 Workshop on Large Language Model (LLM) Agents**.
 
-📄 **Paper:** [arXiv:2404.15384](https://arxiv.org/abs/2404.15384)
+📄 **Paper:** [arXiv:2404.15384](https://arxiv.org/abs/2404.15384) &nbsp;·&nbsp; [PDF in this repo](FL-TAC_paper.pdf)
+
+> Click the **"PDF in this repo"** link above to read the paper directly in GitHub's built-in PDF viewer (scroll, zoom, full text).
+> *(GitHub does not allow embedding scrollable iframes inside README files for security reasons, so an inline viewer isn't possible — but the linked viewer is right next door.)*
 
 ### Authors
 
@@ -56,13 +59,15 @@ Fine-tuning large pre-trained models in a Federated Learning (FL) setting is bot
 **FL-TAC** addresses this by giving each client **one low-rank adapter per local task** instead of a single shared adapter, then clustering similar adapters on the server side and aggregating within each cluster. This recovers strong per-task performance at a *lower* communication budget than the standard FedIT baseline.
 
 <p align="center">
-  <img src="assets/framework.png" alt="FL-TAC framework" width="780"/>
+  <img src="assets/fig1a_overview.png" alt="FL-TAC framework — server/client adapter exchange" width="430"/>
+  &nbsp;
+  <img src="assets/fig1b_aggregation.png" alt="FL-TAC framework — server clustering and aggregation" width="350"/>
   <br><em>Figure 1. (a) Each client trains one LoRA adapter per local task and uploads them to the server.
-  (b) The server runs K-means on received adapters and performs FedAvg within each cluster, producing N task-specific global adapters.</em>
+  (b) The server runs K-means on the received adapters and performs FedAvg within each cluster, producing N task-specific global adapters.</em>
 </p>
 
 <p align="center">
-  <img src="assets/approx_error_vs_rank.png" alt="Approximation error vs LoRA rank" width="520"/>
+  <img src="assets/fig3_approx_error.png" alt="Approximation error vs LoRA rank" width="600"/>
   <br><em>Figure 3. Toy simulation: a single shared adapter (red) needs much higher rank than per-task adapters (green) to reach the same approximation error — motivating the per-task design of FL-TAC.</em>
 </p>
 
@@ -91,7 +96,9 @@ We evaluate on three scenarios spanning text generation, text classification, an
 All scenarios use **10 clients** with a **Dirichlet(α = 0.5)** partition (Hsu et al., 2020) of each task across clients.
 
 <p align="center">
-  <img src="assets/data_distribution_and_radar.png" alt="Data distribution and Dolly radar" width="820"/>
+  <img src="assets/fig2a_client_allocation.svg" alt="Per-client task data proportions" width="430"/>
+  &nbsp;
+  <img src="assets/fig2b_radar.png" alt="Dolly-15k radar chart" width="380"/>
   <br><em>Figure 2. (a) Per-client task data proportions under Dirichlet(α = 0.5).
   (b) Radar chart of FL-TAC vs LLaMA / LLaMA-LoRA / FedIT on the eight Databricks-Dolly-15k tasks.</em>
 </p>
@@ -125,7 +132,7 @@ All scenarios use **10 clients** with a **Dirichlet(α = 0.5)** partition (Hsu e
 FL-TAC also uses **fewer** trainable params than FedIT in both BERT (192 K vs 614 K) and ViT (36.8 K vs 294.9 K) settings.
 
 <p align="center">
-  <img src="assets/umap_clustering.png" alt="UMAP clustering progression" width="820"/>
+  <img src="assets/fig4_umap.svg" alt="UMAP clustering progression" width="900"/>
   <br><em>Figure 4. UMAP visualization of K-means clustering of received adapters at the server, from epoch 1 (left) to epoch 9 (right). Clusters become increasingly separated as training progresses, confirming that LoRA adapters carry strong task identity even without explicit task labels.</em>
 </p>
 

@@ -10,7 +10,10 @@
 
 论文 **"FL-TAC: Enhanced Fine-Tuning in Federated Learning via Low-Rank, Task-Specific Adapter Clustering"** 的官方代码实现。本工作发表于 **ICLR 2024 大语言模型智能体研讨会(LLM Agents Workshop)**。
 
-📄 **论文链接:** [arXiv:2404.15384](https://arxiv.org/abs/2404.15384)
+📄 **论文:** [arXiv:2404.15384](https://arxiv.org/abs/2404.15384) &nbsp;·&nbsp; [本仓库内 PDF](FL-TAC_paper.pdf)
+
+> 点击上方 **「本仓库内 PDF」** 即可在 GitHub 自带的 PDF 阅览器里直接看论文(支持滚动、缩放、全文)。
+> *(GitHub 出于安全考虑不允许在 README 里嵌入可滚动的 iframe,所以无法做内嵌阅读窗口——但点开就在隔壁,体验差别不大。)*
 
 ### 作者
 
@@ -57,13 +60,15 @@
 **FL-TAC** 的核心思想:让每个客户端**为本地的每一个任务训练一个独立的低秩 LoRA 适配器**,而不是只用一个共享适配器;服务端收到所有适配器后,通过 K-means 聚类将相似的(隐含同任务的)适配器分到一起,然后在每个簇内做加权 FedAvg 聚合。这样在**比 FedIT 基线更低的通信预算下**,获得了更强的多任务性能。
 
 <p align="center">
-  <img src="assets/framework.png" alt="FL-TAC 框架图" width="780"/>
+  <img src="assets/fig1a_overview.png" alt="FL-TAC 框架——客户端/服务端 adapter 交换" width="430"/>
+  &nbsp;
+  <img src="assets/fig1b_aggregation.png" alt="FL-TAC 框架——服务端聚类与聚合" width="350"/>
   <br><em>图 1. (a) 每个客户端为每一个本地任务训练一个 LoRA 适配器并上传到服务端。
   (b) 服务端对收到的适配器做 K-means 聚类,并在每个簇内做 FedAvg 聚合,得到 N 个全局任务特定适配器。</em>
 </p>
 
 <p align="center">
-  <img src="assets/approx_error_vs_rank.png" alt="近似误差 vs LoRA rank" width="520"/>
+  <img src="assets/fig3_approx_error.png" alt="近似误差 vs LoRA rank" width="600"/>
   <br><em>图 3. 玩具实验:单个共享适配器(红线)需要远高于"每任务一个适配器"(绿线)的 rank,才能达到相同的近似误差——这就是 FL-TAC 采用每任务适配器设计的动机。</em>
 </p>
 
@@ -92,7 +97,9 @@
 三个场景都使用 **10 个客户端**,每个任务的数据按 **Dirichlet(α = 0.5)** (Hsu et al., 2020)切分到客户端上。
 
 <p align="center">
-  <img src="assets/data_distribution_and_radar.png" alt="数据分布与 Dolly 雷达图" width="820"/>
+  <img src="assets/fig2a_client_allocation.svg" alt="各客户端任务数据占比" width="430"/>
+  &nbsp;
+  <img src="assets/fig2b_radar.png" alt="Dolly-15k 雷达图" width="380"/>
   <br><em>图 2. (a) Dirichlet(α=0.5) 下各客户端的任务数据占比。
   (b) Databricks-Dolly-15k 八个任务上 FL-TAC 与 LLaMA / LLaMA-LoRA / FedIT 的雷达图对比。</em>
 </p>
@@ -126,7 +133,7 @@
 在 BERT(192 K vs 614 K)和 ViT(36.8 K vs 294.9 K)两个场景下,FL-TAC 的可训练参数量也都**少于** FedIT。
 
 <p align="center">
-  <img src="assets/umap_clustering.png" alt="UMAP 聚类演化" width="820"/>
+  <img src="assets/fig4_umap.svg" alt="UMAP 聚类演化" width="900"/>
   <br><em>图 4. 服务端 K-means 聚类结果的 UMAP 降维可视化,从 epoch 1(最左)到 epoch 9(最右)。可以清晰看到随着训练推进,不同任务的 adapter 在表示空间中越来越分得开,即使没有任何任务标签的监督。</em>
 </p>
 
