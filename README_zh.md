@@ -35,6 +35,7 @@
 - [仓库结构](#仓库结构)
 - [安装](#安装)
 - [数据集](#数据集)
+- [数据切分](#数据切分)
 - [复现实验](#复现实验)
   - [场景 1 —— GLUE 文本分类(BERT)](#场景-1--glue-文本分类bert)
   - [场景 2 —— CIFAR 图像分类(ViT)](#场景-2--cifar-图像分类vit)
@@ -186,9 +187,57 @@ LLaMA-7B 主干可以使用 [`huggyllama/llama-7b`](https://huggingface.co/huggy
 
 ---
 
+## 数据切分
+
+三个场景统一使用 **逐任务 Dirichlet(α) 切分** —— 这是 FL benchmark 里最常用的非 IID 切分方式(Hsu et al., 2020)。对每一个任务独立做以下操作:
+
+1. 采样一个长度为 `n_clients` 的向量 `p ~ Dir(α, ..., α)`(我们用 **n_clients = 10**,**α = 0.5**)。
+2. 把小于 `min_frac = 0.01` 的分量置零并重新归一化 —— 这样部分 client 在某个任务上会**完全没有数据**,更贴近真实的稀疏分布。
+3. 按这些比例把该任务的训练集切分到 10 个 client 上。
+
+每个任务使用不同的 seed(`seed + 任务下标`),保证不同任务的切分相互独立。具体实现见 [`fltac/data.py`](fltac/data.py) 中的 `dirichlet_partition` 和 `partition_all`。
+
+我们还提供了一个**完全无需下载数据集、不需要加载模型**的轻量级脚本,可以快速查看任意场景的切分结果:
+
+```bash
+# 默认配置:10 个 client、alpha=0.5、seed=42
+python scripts/inspect_partition.py --scenario glue
+python scripts/inspect_partition.py --scenario cifar
+python scripts/inspect_partition.py --scenario dolly
+
+# 试一个更偏斜的切分,并保存为 CSV
+python scripts/inspect_partition.py --scenario glue --alpha 0.1 \
+    --save partition.csv
+```
+
+`--scenario glue` 默认配置下的输出示例:
+
+```
+=== GLUE partition (n_clients=10, alpha=0.5, min_frac=0.01, seed=42) ===
+
+client      sst2    mrpc     qqp    qnli     rte    total
+---------------------------------------------------------
+#0          9765       0       0    4435    1029    15229
+#1         15540     263   12764   10121      43    38731
+#2             0     536       0   11902     245    12683
+#3          9174     131    8855    2208     151    20519
+#4             0    2164   31032    5540     518    39254
+#5          1669      58   13121    8412     379    23639
+#6          5443      71  165334   43650       0   214498
+#7          3777     175       0   12879      88    16919
+#8         12940     270  132740    5596      36   151582
+#9          9041       0       0       0       1     9042
+---------------------------------------------------------
+total      67349    3668  363846  104743    2490   542096
+```
+
+本 README 里所有报告的实验结果统一使用 **n_clients = 10、α = 0.5、seed = 42**。把 `--n_clients`、`--alpha`、`--seed` 传给训练脚本(或这个 inspect 脚本)就可以尝试别的切分 —— 给定这四个输入,切分是完全可复现的。
+
+---
+
 ## 复现实验
 
-三个场景统一使用相同的联邦设置:**10 个客户端,所有任务的数据都按 Dirichlet(α = 0.5)** (Hsu et al., 2020)切分到客户端,seed = 42,每轮全员参与。
+三个场景统一使用相同的联邦设置:**10 个客户端,所有任务的数据都按 Dirichlet(α = 0.5)** (Hsu et al., 2020)切分到客户端,seed = 42,每轮全员参与。具体细节见上面的 [数据切分](#数据切分) 章节。
 
 ### 场景 1 —— GLUE 文本分类(BERT)
 

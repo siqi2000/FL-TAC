@@ -35,6 +35,7 @@ Official implementation of **"FL-TAC: Enhanced Fine-Tuning in Federated Learning
 - [Repository structure](#repository-structure)
 - [Installation](#installation)
 - [Datasets](#datasets)
+- [Data partition](#data-partition)
 - [Reproducing the paper](#reproducing-the-paper)
   - [Scenario 1 — GLUE text classification (BERT)](#scenario-1--glue-text-classification-bert)
   - [Scenario 2 — CIFAR image classification (ViT)](#scenario-2--cifar-image-classification-vit)
@@ -185,9 +186,57 @@ For LLaMA-7B you'll also need [`huggyllama/llama-7b`](https://huggingface.co/hug
 
 ---
 
+## Data partition
+
+All three scenarios use a **per-task Dirichlet(α) split** following Hsu et al., 2020 — the standard non-IID partition for FL benchmarking. For each task independently:
+
+1. Sample a vector `p ~ Dir(α, ..., α)` of length `n_clients` (we use **n_clients = 10**, **α = 0.5**).
+2. Zero out any entry below `min_frac = 0.01` and renormalise — this gives some clients zero data for that task, modelling realistic data sparsity.
+3. Partition the task's training samples across the 10 clients in those proportions.
+
+A different `seed` is used for each task (`seed + task_index`) so the per-task splits are independent. The implementation is in [`fltac/data.py`](fltac/data.py) (`dirichlet_partition` and `partition_all`).
+
+You can inspect the exact split for any scenario **without downloading anything or loading a model** using the helper script:
+
+```bash
+# Default: 10 clients, alpha=0.5, seed=42
+python scripts/inspect_partition.py --scenario glue
+python scripts/inspect_partition.py --scenario cifar
+python scripts/inspect_partition.py --scenario dolly
+
+# Try a more skewed split, save to CSV
+python scripts/inspect_partition.py --scenario glue --alpha 0.1 \
+    --save partition.csv
+```
+
+Example output for `--scenario glue` (default config):
+
+```
+=== GLUE partition (n_clients=10, alpha=0.5, min_frac=0.01, seed=42) ===
+
+client      sst2    mrpc     qqp    qnli     rte    total
+---------------------------------------------------------
+#0          9765       0       0    4435    1029    15229
+#1         15540     263   12764   10121      43    38731
+#2             0     536       0   11902     245    12683
+#3          9174     131    8855    2208     151    20519
+#4             0    2164   31032    5540     518    39254
+#5          1669      58   13121    8412     379    23639
+#6          5443      71  165334   43650       0   214498
+#7          3777     175       0   12879      88    16919
+#8         12940     270  132740    5596      36   151582
+#9          9041       0       0       0       1     9042
+---------------------------------------------------------
+total      67349    3668  363846  104743    2490   542096
+```
+
+The runs that produced our results in this README all use **n_clients = 10, α = 0.5, seed = 42**. Pass `--n_clients`, `--alpha`, `--seed` to the training script (or this inspection script) to try different splits — the partition is fully reproducible from those four inputs.
+
+---
+
 ## Reproducing the paper
 
-All three scenarios use the same federated setup: **10 clients, Dirichlet(α = 0.5) data partition** on every task (Hsu et al., 2020), seed = 42, full client participation each round.
+All three scenarios use the same federated setup: **10 clients, Dirichlet(α = 0.5) data partition** on every task (Hsu et al., 2020), seed = 42, full client participation each round. See [Data partition](#data-partition) above for details.
 
 ### Scenario 1 — GLUE text classification (BERT)
 
