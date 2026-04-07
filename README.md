@@ -2,9 +2,11 @@
 
 <p align="center"><b>📖 <a href="README.md">English</a> · <a href="README_zh.md">中文</a></b></p>
 
-[![arXiv](https://img.shields.io/badge/arXiv-2404.15384-b31b1b.svg)](https://arxiv.org/abs/2404.15384)
-[![Venue](https://img.shields.io/badge/ICLR%202024-LLM%20Agents%20Workshop-blue)](https://llmagents.github.io/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<p align="center">
+  <a href="https://arxiv.org/abs/2404.15384"><img src="https://img.shields.io/badge/arXiv-2404.15384-b31b1b.svg" alt="arXiv"/></a>
+  <a href="https://llmagents.github.io/"><img src="https://img.shields.io/badge/ICLR%202024-LLM%20Agents%20Workshop-blue" alt="Venue"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"/></a>
+</p>
 
 Official implementation of **"FL-TAC: Enhanced Fine-Tuning in Federated Learning via Low-Rank, Task-Specific Adapter Clustering"**, accepted at the **ICLR 2024 Workshop on Large Language Model (LLM) Agents**.
 
