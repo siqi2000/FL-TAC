@@ -62,6 +62,10 @@ def load_scenario(cfg):
 # ---------------------------------------------------------------------------
 def run(cfg: dict):
     set_seed(cfg.get("seed", 42))
+    # Some torch+cuDNN+driver combos throw CUDNN_STATUS_NOT_INITIALIZED on the
+    # first conv2d of ViT. Disabling cuDNN is a safe (slightly slower) fallback.
+    if cfg.get("disable_cudnn", False) or cfg["scenario"] == "cifar":
+        torch.backends.cudnn.enabled = False
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
     logger = JsonlLogger(out_dir / "metrics.jsonl")
