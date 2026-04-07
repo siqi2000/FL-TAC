@@ -1,0 +1,28 @@
+scenario: glue
+model_name: bert-base-uncased
+method: fltac          # 'fltac' or 'fedit'
+
+# Federated setup
+n_clients: 10
+dirichlet_alpha: 0.5
+rounds: 20
+local_steps: 50
+
+# LoRA
+lora_rank: 4
+lora_alpha: 16
+lora_dropout: 0.05
+
+# Optim
+lr: 5.0e-4
+batch_size: 32
+max_len: 128
+
+# Eval
+eval_every: 2
+max_eval_batches: 50
+
+# IO
+seed: 42
+output_dir: results/glue_bert_fltac
+cache_dir: ./hf_cache

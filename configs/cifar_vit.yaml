@@ -1,0 +1,22 @@
+scenario: cifar
+model_name: google/vit-base-patch16-224-in21k
+method: fltac
+
+n_clients: 10
+dirichlet_alpha: 0.5
+rounds: 20
+local_steps: 50
+
+lora_rank: 4
+lora_alpha: 16
+lora_dropout: 0.05
+
+lr: 1.0e-3
+batch_size: 64
+
+eval_every: 2
+max_eval_batches: 30
+
+seed: 42
+output_dir: results/cifar_vit_fltac
+cache_dir: ./hf_cache

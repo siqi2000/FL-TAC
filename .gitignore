@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Data & model caches
+data/
+.cache/
+~/.cache/
+hf_cache/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+
+# Experiment outputs
+results/
+runs/
+logs/
+wandb/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

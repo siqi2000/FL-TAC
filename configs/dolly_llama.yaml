@@ -1,0 +1,23 @@
+scenario: dolly
+model_name: huggyllama/llama-7b   # or meta-llama/Llama-2-7b-hf
+method: fltac
+
+n_clients: 10
+dirichlet_alpha: 0.5
+rounds: 10
+local_steps: 30
+
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+
+lr: 3.0e-4
+batch_size: 4
+max_len: 512
+
+eval_every: 1
+max_eval_batches: 20
+
+seed: 42
+output_dir: results/dolly_llama_fltac
+cache_dir: ./hf_cache
