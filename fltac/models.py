@@ -77,13 +77,29 @@ def attach_lora(model, arch: str, rank: int, alpha: int = 16,
 # State-dict helpers (the FL "adapters" we exchange)
 # ---------------------------------------------------------------------------
 def get_adapter_state(peft_model) -> dict:
-    """Return CPU copy of trainable LoRA params (the v_{i,j} of the paper)."""
+    """Return CPU copy of LoRA params only (the v_{i,j} of the paper).
+
+    We deliberately exclude classifier heads / `modules_to_save` so that
+    only the low-rank adapters are transmitted between server and clients.
+    """
     sd = get_peft_model_state_dict(peft_model)
-    return {k: v.detach().cpu().clone() for k, v in sd.items()}
+    return {k: v.detach().cpu().clone() for k, v in sd.items() if "lora_" in k}
 
 
 def set_adapter_state(peft_model, state: dict):
-    set_peft_model_state_dict(peft_model, state)
+    """Load LoRA params into the model in-place, ignoring keys not in `state`.
+
+    We bypass `set_peft_model_state_dict` because some peft versions error out
+    when the state dict is missing classifier-head keys. We only need to copy
+    the LoRA tensors into the corresponding model parameters.
+    """
+    name_to_param = dict(peft_model.named_parameters())
+    with torch.no_grad():
+        for k, v in state.items():
+            # peft state-dict keys start with "base_model." which matches
+            # the model's named_parameters() exactly.
+            if k in name_to_param:
+                name_to_param[k].data.copy_(v.to(name_to_param[k].device))
 
 
 def zero_like_state(state: dict) -> dict:
