@@ -19,7 +19,8 @@ class JsonlLogger:
     def __init__(self, path: str | os.PathLike):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.f = open(self.path, "a", encoding="utf-8")
+        # Overwrite per run -- experiments expect fresh logs each invocation
+        self.f = open(self.path, "w", encoding="utf-8")
 
     def log(self, **record):
         self.f.write(json.dumps(record, ensure_ascii=False) + "\n")
